@@ -207,9 +207,16 @@ class FIFAPredictor:
         print("[5/5] Simulating 2026 World Cup...")
         if groups is None:
             groups = world_cup_2026_groups()
-
         sim = TournamentSimulator(self.config)
+        predictor_fn = self._get_sim_predictor_fn()
+        group_objs = sim.build_groups(groups)
+        results = sim.run_group_stage(group_objs, predictor_fn)
+        sim.print_results(results)
+        qualifiers = sim.get_group_standings(results)
+        return results, qualifiers
 
+    def _get_sim_predictor_fn(self):
+        """Build a fast Poisson+Elo predictor for simulation."""
         poisson_model = None
         elo_model = None
         for name, model in self.ensemble.base_models_.items():
@@ -219,23 +226,40 @@ class FIFAPredictor:
             elif 'elo' in name.lower():
                 elo_model = inner
 
-        def predictor_fn(t1, t2):
+        def fn(t1, t2):
             if poisson_model is not None and elo_model is not None:
-                p1 = np.array(poisson_model.predict_match_probs(t1, t2))
-                p2 = np.array(elo_model.predict_match_probs(t1, t2))
-                return 0.6 * p1 + 0.4 * p2
+                return 0.6 * np.array(poisson_model.predict_match_probs(t1, t2)) + 0.4 * np.array(elo_model.predict_match_probs(t1, t2))
             elif poisson_model is not None:
                 return np.array(poisson_model.predict_match_probs(t1, t2))
             elif elo_model is not None:
                 return np.array(elo_model.predict_match_probs(t1, t2))
             else:
                 return np.array([0.45, 0.20, 0.35])
+        return fn
 
+    def predict_all_group_matches(self, groups=None):
+        """Return a DataFrame with predictions for all 48 group stage matches."""
+        if groups is None:
+            groups = world_cup_2026_groups()
+        sim = TournamentSimulator(self.config)
+        predictor_fn = self._get_sim_predictor_fn()
         group_objs = sim.build_groups(groups)
-        results = sim.run_group_stage(group_objs, predictor_fn)
-        sim.print_results(results)
+        return sim.all_fixtures(group_objs, predictor_fn)
+
+    def live_simulate(self, fixed_results, groups=None):
+        """Simulate remaining matches with some results already played.
+
+        fixed_results: dict { group_name: { (team1, team2): (goals1, goals2) } }
+        Returns (results, standings_dfs, qualifiers).
+        """
+        if groups is None:
+            groups = world_cup_2026_groups()
+        sim = TournamentSimulator(self.config)
+        predictor_fn = self._get_sim_predictor_fn()
+        group_objs = sim.build_groups(groups)
+        results, standings = sim.run_group_stage_with_fixed(group_objs, fixed_results, predictor_fn)
         qualifiers = sim.get_group_standings(results)
-        return results, qualifiers
+        return results, standings, qualifiers
 
     def run(self):
         """Run the full pipeline end-to-end."""

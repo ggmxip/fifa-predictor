@@ -38,7 +38,7 @@ def load_predictor():
 
 predictor = load_predictor()
 
-tab1, tab2, tab3, tab4 = st.tabs(["Match Predictor", "Group Simulation", "Model Performance", "About"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Match Predictor", "Group Simulation", "All Fixtures", "Live Tournament", "Model Performance"])
 
 with tab1:
     st.header("Predict a Match")
@@ -135,6 +135,119 @@ with tab2:
             st.warning("No trained model found. Please run `python cli.py train` first.")
 
 with tab3:
+    st.header("All Group Stage Fixtures")
+    if predictor and predictor.is_trained_:
+        groups = world_cup_2026_groups()
+        if st.button("Show All Fixtures", type="primary", use_container_width=True):
+            fixtures_df = predictor.predict_all_group_matches(groups)
+            for group in sorted(fixtures_df['Group'].unique()):
+                st.subheader(f"Group {group}")
+                gdf = fixtures_df[fixtures_df['Group'] == group].reset_index(drop=True)
+                gdf['Match'] = gdf['Team1'] + ' vs ' + gdf['Team2']
+                display = gdf[['Match', 'H Win %', 'Draw %', 'A Win %', 'Prediction']].copy()
+
+                def color_pred(val):
+                    if val == 'Home Win':
+                        return 'background-color: #27ae6033'
+                    elif val == 'Away Win':
+                        return 'background-color: #e74c3c33'
+                    return 'background-color: #f39c1233'
+
+                styled = display.style.applymap(color_pred, subset=['Prediction'])
+                for _, row in display.iterrows():
+                    c1, c2, c3, c4, c5 = st.columns([2, 1, 1, 1, 1.2])
+                    c1.markdown(f"**{row['Team1']}** vs **{row['Team2']}**")
+                    c2.markdown(f"{row['H Win %']}%")
+                    c3.markdown(f"{row['Draw %']}%")
+                    c4.markdown(f"{row['A Win %']}%")
+                    pred_color = {'Home Win': '#27ae60', 'Draw': '#f39c12', 'Away Win': '#e74c3c'}
+                    c5.markdown(f":{pred_color.get(row['Prediction'], '#333')}[**{row['Prediction']}**]")
+                st.divider()
+    else:
+        st.warning("No trained model found. Please run `python cli.py train` first.")
+
+with tab4:
+    st.header("Live Tournament")
+    st.caption("Enter actual results for played matches to see updated qualification probabilities.")
+
+    groups = world_cup_2026_groups()
+
+    if 'fixed_results' not in st.session_state:
+        st.session_state.fixed_results = {g: {} for g in groups}
+    if 'live_run' not in st.session_state:
+        st.session_state.live_run = False
+
+    for group_name in groups:
+        with st.expander(f"Group {group_name} — {', '.join(groups[group_name])}", expanded=False):
+            st.subheader(f"Group {group_name}")
+            teams = groups[group_name]
+            fixtures = [(teams[i], teams[j]) for i, j in [(0,1),(0,2),(0,3),(1,2),(1,3),(2,3)]]
+            cols = st.columns(6)
+            for idx, (t1, t2) in enumerate(fixtures):
+                key_t1 = f"g_{group_name}_{t1}_{t2}_t1"
+                key_t2 = f"g_{group_name}_{t1}_{t2}_t2"
+                key_played = f"g_{group_name}_{t1}_{t2}_played"
+                with cols[idx % 3]:
+                    st.markdown(f"**{t1}** vs **{t2}**")
+                    c1, c2, c3 = st.columns([1, 1, 1])
+                    g1_key = f"live_{group_name}_{t1}_{t2}_g1"
+                    g2_key = f"live_{group_name}_{t1}_{t2}_g2"
+                    with c1:
+                        g1 = st.number_input(f"{t1}", min_value=0, max_value=20, value=0, key=g1_key, label_visibility="collapsed")
+                    with c2:
+                        st.markdown("—")
+                    with c3:
+                        g2 = st.number_input(f"{t2}", min_value=0, max_value=20, value=0, key=g2_key, label_visibility="collapsed")
+                    if g1 > 0 or g2 > 0:
+                        st.session_state.fixed_results[group_name][(t1, t2)] = (g1, g2)
+                        st.markdown(f"✓ *{g1}-{g2}*", unsafe_allow_html=True)
+
+    if st.button("Update Predictions", type="primary", use_container_width=True):
+        if predictor and predictor.is_trained_:
+            fixed = {g: v for g, v in st.session_state.fixed_results.items() if v}
+            results, standings, qualifiers = predictor.live_simulate(fixed, groups)
+            st.session_state.live_results = results
+            st.session_state.live_standings = standings
+            st.session_state.live_qualifiers = qualifiers
+            st.session_state.live_run = True
+        else:
+            st.warning("No trained model. Run `python cli.py train` first.")
+
+    if st.session_state.get('live_run'):
+        results = st.session_state.live_results
+        standings = st.session_state.live_standings
+        qualifiers = st.session_state.live_qualifiers
+
+        st.subheader("Current Group Standings")
+        for group_name in groups:
+            st.markdown(f"**Group {group_name}**")
+            sdf = standings.get(group_name, pd.DataFrame())
+            if not sdf.empty:
+                cols_to_show = ['Team', 'Pld', 'W', 'D', 'L', 'GF', 'GA', 'GD', 'Pts']
+                sdf_display = sdf[cols_to_show] if all(c in sdf.columns for c in cols_to_show) else sdf
+                st.dataframe(sdf_display, use_container_width=True, hide_index=True)
+
+        st.subheader("Updated Qualification Probabilities")
+        for group_name, data in results.items():
+            st.markdown(f"**Group {group_name}**")
+            sorted_teams = sorted(data['qualification_probs'].keys(),
+                                  key=lambda t: data['qualification_probs'][t], reverse=True)
+            table_data = []
+            for team in sorted_teams:
+                qp = data['qualification_probs'][team] * 100
+                tp = data['top_team_probs'][team] * 100
+                table_data.append({'Team': team, 'Qualify %': f"{qp:.1f}%", 'Win Group %': f"{tp:.1f}%"})
+            st.dataframe(pd.DataFrame(table_data), use_container_width=True, hide_index=True)
+
+        st.subheader("Predicted Qualifiers")
+        qual_cols = st.columns(4)
+        for i, (group_name, teams) in enumerate(qualifiers.items()):
+            with qual_cols[i % 4]:
+                st.markdown(f"**Group {group_name}**")
+                st.markdown(f"1. {teams[0]}")
+                st.markdown(f"2. {teams[1]}")
+
+with tab5:
     st.header("Model Performance")
 
     results_csv = Path('results/comparison.csv')
@@ -169,33 +282,3 @@ with tab3:
             st.pyplot(fig)
     else:
         st.info("No evaluation results found. Run `python cli.py evaluate` first.")
-
-with tab4:
-    st.header("About the Model")
-    st.markdown("""
-    ### Architecture
-    This predictor uses a **hybrid ensemble** combining:
-
-    | Model | Type | Role |
-    |-------|------|------|
-    | **XGBoost** | Gradient Boosted Trees | Primary classifier |
-    | **LightGBM** | Gradient Boosted Trees | Ensemble diversity |
-    | **Random Forest** | Bagging Ensemble | Robust baseline |
-    | **Neural Network** | 3-layer MLP | Pattern detection |
-    | **Poisson** | Statistical | Score-based prediction |
-    | **Elo** | Rating System | Head-to-head dynamics |
-
-    The outputs are stacked via a **logistic regression meta-learner** with Platt scaling calibration.
-
-    ### Features
-    - Rolling form (weighted by recency)
-    - Goal scoring/conceding averages
-    - FIFA / Elo ranking differentials
-    - Head-to-head history
-    - Tournament experience
-    - Confederation alignment
-    - Host nation advantage
-
-    ### Accuracy
-    The model is evaluated on 2018 and 2022 World Cup group stage results.
-    """)
