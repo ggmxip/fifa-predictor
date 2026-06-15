@@ -178,9 +178,10 @@ class MatchDataLoader:
                 'Japan', 'South Korea', 'Australia', 'Saudi Arabia', 'Iran', 'Qatar', 'United Arab Emirates',
                 'Nigeria', 'Ghana', 'Senegal', 'Cameroon', 'Ivory Coast', 'Egypt', 'Morocco', 'Algeria', 'Tunisia', 'South Africa',
                 'New Zealand', 'Scotland', 'Wales', 'Iceland', 'Slovenia', 'Slovakia', 'Bosnia and Herzegovina', 'Togo',
-                'Angola', 'North Korea',
+                'Angola', 'North Korea', 'Haiti', 'Curacao', 'Cape Verde', 'Iraq', 'Norway', 'Congo DR', 'Uzbekistan', 'Jordan',
             ],
             'confederation': [
                 'CONMEBOL'] * 10 + ['UEFA'] * 20 + ['CONCACAF'] * 8 + ['AFC'] * 7 + ['CAF'] * 10
-                + ['OFC'] * 1 + ['UEFA'] * 6 + ['CAF'] * 2 + ['AFC'] * 1,
+                + ['OFC'] * 1 + ['UEFA'] * 6 + ['CAF'] * 2 + ['AFC'] * 1
+                + ['CONCACAF'] * 2 + ['CAF'] * 1 + ['AFC'] * 1 + ['UEFA'] * 1 + ['CAF'] * 1 + ['AFC'] * 2,
         })

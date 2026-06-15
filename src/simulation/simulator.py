@@ -222,16 +222,16 @@ class TournamentSimulator:
 
 def world_cup_2026_groups():
     return {
-        'A': ['Mexico', 'United States', 'Canada', 'New Zealand'],
-        'B': ['England', 'Iran', 'Scotland', 'Wales'],
-        'C': ['Argentina', 'Chile', 'Nigeria', 'South Korea'],
-        'D': ['France', 'Netherlands', 'Senegal', 'Ecuador'],
-        'E': ['Spain', 'Croatia', 'Japan', 'Costa Rica'],
-        'F': ['Brazil', 'Switzerland', 'Serbia', 'Cameroon'],
-        'G': ['Germany', 'Denmark', 'Uruguay', 'Saudi Arabia'],
-        'H': ['Portugal', 'Belgium', 'Ghana', 'Australia'],
-        'I': ['Italy', 'Poland', 'Morocco', 'Qatar'],
-        'J': ['Colombia', 'Sweden', 'Ivory Coast', 'United Arab Emirates'],
-        'K': ['Czech Republic', 'Peru', 'Algeria', 'Panama'],
-        'L': ['Turkey', 'Ukraine', 'Tunisia', 'Paraguay'],
+        'A': ['Mexico', 'South Korea', 'Czech Republic', 'South Africa'],
+        'B': ['Switzerland', 'Canada', 'Qatar', 'Bosnia and Herzegovina'],
+        'C': ['Scotland', 'Morocco', 'Brazil', 'Haiti'],
+        'D': ['United States', 'Australia', 'Turkey', 'Paraguay'],
+        'E': ['Germany', 'Ecuador', 'Ivory Coast', 'Curacao'],
+        'F': ['Japan', 'Netherlands', 'Sweden', 'Tunisia'],
+        'G': ['Belgium', 'Egypt', 'Iran', 'New Zealand'],
+        'H': ['Spain', 'Cape Verde', 'Saudi Arabia', 'Uruguay'],
+        'I': ['France', 'Senegal', 'Iraq', 'Norway'],
+        'J': ['Argentina', 'Algeria', 'Austria', 'Jordan'],
+        'K': ['Portugal', 'Congo DR', 'Uzbekistan', 'Colombia'],
+        'L': ['England', 'Croatia', 'Ghana', 'Panama'],
     }
